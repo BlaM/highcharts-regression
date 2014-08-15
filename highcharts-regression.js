@@ -24,7 +24,7 @@
     			
 
             	extraSerie.type = "spline";
-            	
+
                 if (regressionType == "linear") {
                 	regression = _linear(s.data) ;
                 	extraSerie.type = "line";
@@ -56,7 +56,6 @@
     		}
     	}
 
-
     	arguments[1].series = series.concat(extraSeries);
 
     	proceed.apply(this, Array.prototype.slice.call(arguments, 1));
@@ -64,7 +63,19 @@
         
     });
     
+	function _parseDataPoint(index, datapoint) {
+		var ret = {x:index,y:0};
+		if (typeof datapoint == 'object') {
+			if (typeof datapoint[0] !== 'undefined') ret.x = datapoint[0];
+			if (typeof datapoint[1] !== 'undefined') ret.y = datapoint[1];
+			if (typeof datapoint.x !== 'undefined') ret.x = datapoint.x;
+			if (typeof datapoint.y !== 'undefined') ret.y = datapoint.y;
+		} else {
+			ret.y = datapoint;
+		}
 
+		return ret;
+	}
 	
     /**
      * Code extracted from https://github.com/Tom-Alexander/regression-js/
@@ -73,13 +84,14 @@
         var sum = [0, 0, 0, 0, 0, 0], n = 0, results = [];
 
         for (len = data.length; n < len; n++) {
-          if (data[n][1]) {
-            sum[0] += data[n][0]; // X
-            sum[1] += data[n][1]; // Y
-            sum[2] += data[n][0] * data[n][0] * data[n][1]; // XXY
-            sum[3] += data[n][1] * Math.log(data[n][1]); // Y Log Y 
-            sum[4] += data[n][0] * data[n][1] * Math.log(data[n][1]); //YY Log Y
-            sum[5] += data[n][0] * data[n][1]; //XY
+          var coord = _parseDataPoint(n, data[n]);
+          if (coord.y) {
+            sum[0] += coord.x; // X
+            sum[1] += coord.y; // Y
+            sum[2] += coord.x * coord.x * coord.y; // XXY
+            sum[3] += coord.y * Math.log(coord.y); // Y Log Y 
+            sum[4] += coord.x * coord.y * Math.log(coord.y); //YY Log Y
+            sum[5] += coord.x * coord.y; //XY
           }
         }
 
@@ -88,7 +100,8 @@
         var B = (sum[1] * sum[4] - sum[5] * sum[3]) / denominator;
 
         for (var i = 0, len = data.length; i < len; i++) {
-            var coordinate = [data[i][0], A * Math.pow(Math.E, B * data[i][0])];
+            var coord = _parseDataPoint(i, data[i]);
+            var coordinate = [coord.x, A * Math.pow(Math.E, B * coord.x)];
             results.push(coordinate);
         }
 
@@ -113,12 +126,13 @@
         var sum = [0, 0, 0, 0, 0], n = 0, results = [], N = data.length;
 
         for (; n < data.length; n++) {
-          if (data[n][1]) {
-            sum[0] += data[n][0]; //Σ(X) 
-            sum[1] += data[n][1]; //Σ(Y)
-            sum[2] += data[n][0] * data[n][0]; //Σ(X^2)
-            sum[3] += data[n][0] * data[n][1]; //Σ(XY)
-            sum[4] += data[n][1] * data[n][1]; //Σ(Y^2)
+          var coord = _parseDataPoint(n, data[n]);
+          if (coord.y) {
+            sum[0] += coord.x; //Σ(X) 
+            sum[1] += coord.y; //Σ(Y)
+            sum[2] += coord.x * coord.x; //Σ(X^2)
+            sum[3] += coord.x * coord.y; //Σ(XY)
+            sum[4] += coord.y * coord.y; //Σ(Y^2)
           }
         }
 
@@ -127,7 +141,8 @@
         //var correlation = (n * sum[3] - sum[0] * sum[1]) / Math.sqrt((n * sum[2] - sum[0] * sum[0]) * (n * sum[4] - sum[1] * sum[1]));
         
         for (var i = 0, len = data.length; i < len; i++) {
-            var coordinate = [data[i][0], data[i][0] * gradient + intercept];
+            var coord = _parseDataPoint(i, data[i]);
+            var coordinate = [coord.x, coord.x * gradient + intercept];
             results.push(coordinate);
         }
         var string = 'y = ' + Math.round(gradient*100) / 100 + 'x + ' + Math.round(intercept*100) / 100;
@@ -142,11 +157,12 @@
         
 
         for (len = data.length; n < len; n++) {
-          if (data[n][1]) {
-            sum[0] += Math.log(data[n][0]);
-            sum[1] += data[n][1] * Math.log(data[n][0]);
-            sum[2] += data[n][1];
-            sum[3] += Math.pow(Math.log(data[n][0]), 2);
+          var coord = _parseDataPoint(n, data[n]);
+          if (coord.y) {
+            sum[0] += Math.log(coord.x);
+            sum[1] += coord.y * Math.log(coord.x);
+            sum[2] += coord.y;
+            sum[3] += Math.pow(Math.log(coord.x), 2);
           }
         }
         
@@ -154,7 +170,8 @@
         var A = (sum[2] - B * sum[0]) / n;
 
         for (var i = 0, len = data.length; i < len; i++) {
-            var coordinate = [data[i][0], A + B * Math.log(data[i][0])];
+            var coord = _parseDataPoint(i, data[i]);
+            var coordinate = [coord.x, A + B * Math.log(coord.x)];
             results.push(coordinate);
         }
 
@@ -170,11 +187,12 @@
         var sum = [0, 0, 0, 0], n = 0, results = [];
 
         for (len = data.length; n < len; n++) {
-          if (data[n][1]) {
-            sum[0] += Math.log(data[n][0]);
-            sum[1] += Math.log(data[n][1]) * Math.log(data[n][0]);
-            sum[2] += Math.log(data[n][1]);
-            sum[3] += Math.pow(Math.log(data[n][0]), 2);
+           var coord = _parseDataPoint(n, data[n]);
+           if (coord.y) {
+             sum[0] += Math.log(coord.x);
+             sum[1] += Math.log(coord.y) * Math.log(coord.x);
+             sum[2] += Math.log(coord.y);
+             sum[3] += Math.pow(Math.log(coord.x), 2);
           }
         }
 
@@ -182,7 +200,8 @@
         var A = Math.pow(Math.E, (sum[2] - B * sum[0]) / n);
 
         for (var i = 0, len = data.length; i < len; i++) {
-            var coordinate = [data[i][0], A * Math.pow(data[i][0] , B)];
+            var coord = _parseDataPoint(i, data[i]);
+            var coordinate = [coord.x, A * Math.pow(coord.x , B)];
             results.push(coordinate);
         }
 
@@ -210,8 +229,9 @@
     		var c = [];
     		for (var j = 0; j < k; j++) {
     			for (var l = 0, len = data.length; l < len; l++) {
-    				if (data[l][1]) {
-    					b += Math.pow(data[l][0], i + j);
+		            var coord = _parseDataPoint(l, data[l]);
+    				if (coord.y) {
+    					b += Math.pow(coord.x, i + j);
     				}
     			}
     			c.push(b), b = 0;
